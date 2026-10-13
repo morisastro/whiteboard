@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="style.css" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#128397;&#65039;</text></svg>" />
 </head>
-<body>
+<body data-theme="dark">
   <div id="toolbar">
     <div class="group">
       <select id="boardSelect" title="Wybierz board">
@@ -24,22 +24,29 @@
       <button id="btnPen" class="tool active" title="Długopis">&#9998;&#65039;</button>
       <button id="btnEraser" class="tool" title="Gumka">&#129529;</button>
       <button id="btnNote" class="tool" title="Karteczka">&#128466;</button>
+      <button id="btnTask" class="tool" title="Lista zadań">&#9745;</button>
+      <button id="btnColumn" class="tool" title="Kolumna (kanban)">&#9638;</button>
+      <button id="btnArrow" class="tool" title="Strzałka: kliknij kartkę &#8594; kartkę">&#8599;</button>
+      <button id="btnImage" class="tool" title="Wgraj obrazek">&#128444;&#65039;</button>
+      <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden />
       <div id="colors">
-        <button class="swatch active" data-color="#1e1e2e" style="background:#1e1e2e"></button>
-        <button class="swatch" data-color="#e5484d" style="background:#e5484d"></button>
-        <button class="swatch" data-color="#f5a623" style="background:#f5a623"></button>
-        <button class="swatch" data-color="#30a46c" style="background:#30a46c"></button>
-        <button class="swatch" data-color="#0090ff" style="background:#0090ff"></button>
+        <button class="swatch active" data-color="#1e1e2e"></button>
+        <button class="swatch" data-color="#e5484d"></button>
+        <button class="swatch" data-color="#f5a623"></button>
+        <button class="swatch" data-color="#30a46c"></button>
+        <button class="swatch" data-color="#0090ff"></button>
       </div>
       <input id="width" type="range" min="1" max="30" value="3" title="Grubość" />
       <button id="btnUndo" title="Cofnij">&#8630;</button>
       <button id="btnClear" title="Wyczyść">&#128465;&#65039;</button>
       <button id="btnPng" title="Pobierz PNG">PNG</button>
+      <button id="btnTheme" title="Motyw jasny/ciemny">&#9789;</button>
     </div>
     <span id="status"></span>
   </div>
   <div id="canvasWrap">
     <canvas id="canvas"></canvas>
+    <svg id="arrowsSvg"></svg>
   </div>
   <script src="app.js"></script>
 </body>

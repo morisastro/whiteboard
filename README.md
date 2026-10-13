@@ -13,6 +13,7 @@ Prosty whiteboard do rysowania z zapisem boardów do bucketa S3 (SeaweedFS w sto
 
 | Zmienna | Opis |
 |---|---|
+| `STORAGE` | `s3` (domyślny) albo `local` — zapis na dysk (katalog `LOCAL_DIR`, domyślnie `/data`) |
 | `S3_ENDPOINT` | Adres serwera S3, np. `http://s3:8333` (SeaweedFS ze stosu compose) |
 | `S3_BUCKET` | Nazwa bucketa (tworzony automatycznie przy starcie) |
 | `S3_REGION` | Region, domyślnie `us-east-1` |
