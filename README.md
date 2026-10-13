@@ -33,6 +33,22 @@ node server.js
 
 ## Deploy na Coolify
 
+### Wariant A: docker-compose (aplikacja + MinIO naraz)
+
+W Coolify: **New Resource → Docker Compose** z tego repo. Coolify wykryje zmienne `${...}` z `docker-compose.yml` i poprosi o ich wypełnienie:
+
+- `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` — login i hasło roota do MinIO (też używane jako klucze S3 przez aplikację)
+- `S3_BUCKET` — domyślnie `whiteboard`
+- `AUTH_USER` / `AUTH_PASS` — login i hasło do whiteboarda
+
+Compose stawia: MinIO (z wolumenem `minio-data`), jednorazowy kontener `minio-init` (tworzy bucket) i aplikację na porcie `3000`.
+
+Po deploju:
+1. Domenę ustaw w zakładce **Domains** przy serwisie `whiteboard` (port 3000).
+2. Konsolę MinIO znajdziesz na `http://<IP-VPS>:9001` (log: MINIO_ROOT_USER/PASSWORD). Po konfiguracji możesz zamknąć port 9001 w firewallu.
+
+### Wariant B: samo Dockerfile (MinIO już masz)
+
 1. Wypchnij repo na GitHub/Gitea.
 2. W Coolify: **New Resource → Dockerfile** z tego repo.
 3. Ustaw env vars z tabeli powyżej.
