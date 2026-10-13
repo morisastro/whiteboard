@@ -5,6 +5,8 @@ const {
   GetObjectCommand,
   PutObjectCommand,
   DeleteObjectCommand,
+  HeadBucketCommand,
+  CreateBucketCommand,
 } = require("@aws-sdk/client-s3");
 
 const PORT = process.env.PORT || 3000;
@@ -30,6 +32,42 @@ const s3 = new S3Client({
     secretAccessKey: process.env.S3_SECRET_KEY,
   },
 });
+
+async function ensureBucket(attempts = 60) {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      await s3.send(new HeadBucketCommand({ Bucket: S3_BUCKET }));
+      return;
+    } catch (err) {
+      const notFound =
+        err.name === "NotFound" ||
+        err.name === "NoSuchBucket" ||
+        err.$metadata?.httpStatusCode === 404;
+      if (notFound) {
+        try {
+          await s3.send(new CreateBucketCommand({ Bucket: S3_BUCKET }));
+          console.log(`Bucket utworzony: ${S3_BUCKET}`);
+          return;
+        } catch (createErr) {
+          if (
+            createErr.name === "BucketAlreadyOwnedByYou" ||
+            createErr.name === "BucketAlreadyExists"
+          ) {
+            return;
+          }
+          err = createErr;
+        }
+      }
+      if (i === attempts - 1) {
+        console.error(
+          `S3 nieosiągalny lub brak dostępu do bucketa ${S3_BUCKET}: ${err.message}`
+        );
+        return;
+      }
+      await new Promise((r) => setTimeout(r, 3000));
+    }
+  }
+}
 
 const app = express();
 app.disable("x-powered-by");
@@ -135,5 +173,7 @@ app.use((err, req, res, next) => {
   console.error(err);
   res.status(500).json({ error: "server error" });
 });
+
+ensureBucket();
 
 app.listen(PORT, () => console.log(`whiteboard listening on :${PORT}`));
