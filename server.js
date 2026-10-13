@@ -140,10 +140,15 @@ app.get("/api/boards/:id", async (req, res, next) => {
 
 app.put("/api/boards/:id", async (req, res, next) => {
   try {
-    const { strokes } = req.body;
+    const { strokes, notes } = req.body;
     if (!Array.isArray(strokes)) return res.status(400).json({ error: "strokes required" });
-    if (strokes.length > 20000) return res.status(413).json({ error: "too big" });
-    const data = { strokes, updatedAt: new Date().toISOString() };
+    if (strokes.length > 20000 || (notes || []).length > 500)
+      return res.status(413).json({ error: "too big" });
+    const data = {
+      strokes,
+      notes: Array.isArray(notes) ? notes : [],
+      updatedAt: new Date().toISOString(),
+    };
     await s3.send(
       new PutObjectCommand({
         Bucket: S3_BUCKET,
