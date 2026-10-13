@@ -1,25 +1,16 @@
 services:
-  s3-init:
-    image: chrislusf/seaweedfs:3.99
-    restart: "no"
-    entrypoint: /bin/sh
-    command: -c "echo 'eyJpZGVudGl0aWVzIjpbeyJuYW1lIjoiYWRtaW4iLCJhY2Nlc3NLZXkiOiJ3YmFkbWluIiwic2VjcmV0S2V5IjoiZ1RSVm1DeFUwU2FPdmlBdGM2V2hNcUo4IiwiYWN0aW9ucyI6WyJBZG1pbiIsIlJlYWQiLCJXcml0ZSIsIkxpc3QiLCJUYWdnaW5nIl19XX0=' | base64 -d > /cfg/s3.json"
-    volumes:
-      - s3-cfg:/cfg
-
   s3:
     image: chrislusf/seaweedfs:3.99
     restart: unless-stopped
-    depends_on:
-      - s3-init
+    environment:
+      AWS_ACCESS_KEY_ID: wbadmin
+      AWS_SECRET_ACCESS_KEY: gTRVmCxU0SaOviAtc6WhMqJ8
     command: >-
       server -dir=/data -filer
       -master.volumeSizeLimitMB=2048
       -s3 -s3.port=8333
-      -s3.config=/cfg/s3.json
     volumes:
       - s3-data:/data
-      - s3-cfg:/cfg:ro
 
   whiteboard:
     build: .
@@ -39,4 +30,3 @@ services:
 
 volumes:
   s3-data:
-  s3-cfg:
