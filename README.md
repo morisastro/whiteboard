@@ -35,13 +35,11 @@ node server.js
 
 ### Wariant A: docker-compose (aplikacja + SeaweedFS naraz)
 
-W Coolify: **New Resource → Docker Compose** z tego repo. Coolify wykryje zmienne `${...}` z `docker-compose.yaml` i poprosi o ich wypełnienie:
+W Coolify: **New Resource → Docker Compose** z tego repo. Dane S3 są zaszyte w `docker-compose.yaml` — w Coolify ustaw tylko:
 
-- `S3_ACCESS_KEY` / `S3_SECRET_KEY` — dowolny login i hasło (uwierzytelniają S3 i aplikację)
-- `S3_BUCKET` — np. `whiteboard` (tworzony automatycznie)
-- `AUTH_USER` / `AUTH_PASS` — login i hasło do whiteboarda
+- `AUTH_PASS` — hasło do whiteboarda (login: `admin`)
 
-Compose stawia: SeaweedFS w trybie S3 (port 8333, wolumen `s3-data`, niedostępny z zewnątrz) i aplikację na porcie `3000`. Bucket tworzy się automatycznie przy pierwszym starcie aplikacji.
+Compose stawia: SeaweedFS w trybie S3 (port 8333, wolumen `s3-data`, niedostępny z zewnątrz) i aplikację na porcie `3000`. Bucket `whiteboard` tworzy się automatycznie przy pierwszym starcie aplikacji.
 
 Po deploju: ustaw domenę w zakładce **Domains** przy serwisie `whiteboard` (port 3000).
 
