@@ -72,6 +72,36 @@
     return Math.min(max, Math.max(min, v));
   }
 
+  function addResizeHandle(el, obj, minW, minH, onResize) {
+    const h = document.createElement("div");
+    h.className = "resize";
+    h.title = "Rozciągnij";
+    h.addEventListener("pointerdown", (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      h.setPointerCapture(e.pointerId);
+      const sx = e.clientX;
+      const sy = e.clientY;
+      const ow = obj.w;
+      const oh = obj.h;
+      const move = (ev) => {
+        obj.w = Math.max(minW, Math.round(ow + ev.clientX - sx));
+        obj.h = Math.max(minH, Math.round(oh + ev.clientY - sy));
+        el.style.width = obj.w + "px";
+        el.style.height = obj.h + "px";
+        if (onResize) onResize();
+      };
+      const up = () => {
+        h.removeEventListener("pointermove", move);
+        h.removeEventListener("pointerup", up);
+        setDirty(true);
+      };
+      h.addEventListener("pointermove", move);
+      h.addEventListener("pointerup", up);
+    });
+    el.appendChild(h);
+  }
+
   /* ---------- canvas ---------- */
 
   function resize() {
@@ -273,6 +303,11 @@
       });
       bar.appendChild(del);
 
+      addResizeHandle(el, c, 200, 240, () => {
+        renderNotes();
+        renderArrows();
+      });
+
       bar.addEventListener("pointerdown", (e) => {
         if (tool === "arrow") {
           handleArrowClick(c.id, el);
@@ -380,6 +415,8 @@
 
       el.appendChild(bar);
 
+      if (!n.col) addResizeHandle(el, n, 120, 80, renderArrows);
+
       if (n.type === "task") {
         const list = document.createElement("div");
         list.className = "tasks";
@@ -455,6 +492,8 @@
         if (n.col) {
           n.x = parseFloat(el.style.left) / rect.width;
           n.y = parseFloat(el.style.top) / rect.height;
+          n.w = parseFloat(el.style.width);
+          n.h = NOTE_H;
           n.col = null;
         }
         bar.setPointerCapture(e.pointerId);
@@ -664,6 +703,8 @@
         renderImages();
       });
       el.append(img, del);
+
+      addResizeHandle(el, im, 60, 40);
 
       el.addEventListener("pointerdown", (e) => {
         if (tool === "arrow" || e.target === del) return;

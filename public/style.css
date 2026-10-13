@@ -228,6 +228,19 @@ body[data-theme="light"] .tool.active { background: #dbeafe; }
 
 .task-add:hover { background: rgba(0, 0, 0, 0.08); }
 
+.resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  touch-action: none;
+  background: linear-gradient(135deg, transparent 45%, rgba(0, 0, 0, 0.3) 45%, rgba(0, 0, 0, 0.3) 55%, transparent 55%, transparent 65%, rgba(0, 0, 0, 0.3) 65%, rgba(0, 0, 0, 0.3) 75%, transparent 75%);
+  border-radius: 0 0 4px 0;
+  z-index: 10;
+}
+
 .task-del {
   padding: 0 4px;
   border: none;
