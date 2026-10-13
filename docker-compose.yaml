@@ -2,16 +2,13 @@ services:
   s3:
     image: chrislusf/seaweedfs:3.99
     restart: unless-stopped
+    entrypoint: /bin/sh
     command: >-
-      server -dir=/data -filer
-      -master.volumeSizeLimitMB=2048
-      -s3 -s3.port=8333
-      -s3.config=/etc/seaweedfs/s3.json
+      -c "mkdir -p /etc/seaweedfs &&
+      echo '{\"identities\":[{\"name\":\"admin\",\"accessKey\":\"wbadmin\",\"secretKey\":\"gTRVmCxU0SaOviAtc6WhMqJ8\",\"actions\":[\"Admin\",\"Read\",\"Write\",\"List\",\"Tagging\"]}]}' > /etc/seaweedfs/s3.json &&
+      exec weed server -dir=/data -filer -master.volumeSizeLimitMB=2048 -s3 -s3.port=8333 -s3.config=/etc/seaweedfs/s3.json"
     volumes:
       - s3-data:/data
-    configs:
-      - source: s3-config
-        target: /etc/seaweedfs/s3.json
 
   whiteboard:
     build: .
@@ -31,17 +28,3 @@ services:
 
 volumes:
   s3-data:
-
-configs:
-  s3-config:
-    content: |
-      {
-        "identities": [
-          {
-            "name": "admin",
-            "accessKey": "wbadmin",
-            "secretKey": "gTRVmCxU0SaOviAtc6WhMqJ8",
-            "actions": ["Admin", "Read", "Write", "List", "Tagging"]
-          }
-        ]
-      }
