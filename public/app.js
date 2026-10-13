@@ -117,6 +117,8 @@
   }
 
   function drawStroke(s, c = ctx) {
+    const W = canvas.width;
+    const H = canvas.height;
     c.globalCompositeOperation = "source-over";
     c.strokeStyle = s.tool === "eraser" ? bg() : s.color;
     c.lineWidth =
@@ -125,16 +127,17 @@
     c.lineCap = "round";
     c.lineJoin = "round";
     const pts = s.points;
+    if (!pts || !pts.length) return;
     if (pts.length === 1) {
       c.fillStyle = c.strokeStyle;
       c.beginPath();
-      c.arc(pts[0][0], pts[0][1], c.lineWidth / 2, 0, Math.PI * 2);
+      c.arc(pts[0][0] * W, pts[0][1] * H, c.lineWidth / 2, 0, Math.PI * 2);
       c.fill();
       return;
     }
     c.beginPath();
-    c.moveTo(pts[0][0], pts[0][1]);
-    for (let i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]);
+    c.moveTo(pts[0][0] * W, pts[0][1] * H);
+    for (let i = 1; i < pts.length; i++) c.lineTo(pts[i][0] * W, pts[i][1] * H);
     c.stroke();
   }
 
@@ -156,15 +159,24 @@
     const nyCss = e.offsetY;
 
     if (tool === "arrow") {
-      clearArrowSelection();
+      if (arrowFrom) {
+        arrows.push({ id: uid(), from: arrowFrom, to: { x: nxCss / R().width, y: nyCss / R().height } });
+        clearArrowSelection();
+        setDirty(true);
+        renderArrows();
+      } else {
+        arrowFrom = { x: nxCss / R().width, y: nyCss / R().height };
+        status("Kliknij koniec strzałki");
+      }
       return;
     }
 
     if (tool === "note" || tool === "task") {
+      const rect = R();
       notes.push({
         id: uid(),
-        x: nxCss / R().width - NOTE_W / 2 / R().width,
-        y: nyCss / R().height - NOTE_H / 2 / R().height,
+        x: nxCss / rect.width - NOTE_W / 2 / rect.width,
+        y: nyCss / rect.height - NOTE_H / 2 / rect.height,
         w: NOTE_W,
         h: NOTE_H,
         color: NOTE_COLORS[0],
@@ -181,10 +193,11 @@
     }
 
     if (tool === "column") {
+      const rect = R();
       columns.push({
         id: uid(),
-        x: nxCss / R().width - 130 / R().width,
-        y: nyCss / R().height - 20 / R().height,
+        x: nxCss / rect.width - 130 / rect.width,
+        y: nyCss / rect.height - 20 / rect.height,
         w: 260,
         h: 360,
         title: "Kolumna",
@@ -203,11 +216,10 @@
       color,
       width: Number(widthInput.value),
       points: [[nx, ny]],
-      pixel: [[nx * canvas.width, ny * canvas.height]],
     };
     strokes.push(drawing);
     setDirty(true);
-    drawStroke({ ...drawing, points: drawing.pixel });
+    drawStroke(drawing);
     e.preventDefault();
   });
 
@@ -222,9 +234,8 @@
       const dy = (ny - last[1]) * canvas.height;
       if (dx * dx + dy * dy < 4) continue;
       drawing.points.push([nx, ny]);
-      drawing.pixel.push([nx * canvas.width, ny * canvas.height]);
     }
-    drawStroke({ ...drawing, points: drawing.pixel.slice(-2) });
+    drawStroke({ ...drawing, points: drawing.points.slice(-2) });
   });
 
   canvas.addEventListener("pointerup", () => (drawing = null));
@@ -266,7 +277,19 @@
       el.style.top = clamp(c.y, 0, 1) * rect.height + "px";
       el.style.width = c.w + "px";
       el.style.height = c.h + "px";
-      if (arrowFrom === c.id) el.classList.add("selected");
+      if (arrowFrom && arrowFrom.id === c.id) el.classList.add("selected");
+
+      el.addEventListener(
+        "pointerdown",
+        (e) => {
+          if (tool === "arrow") {
+            e.stopPropagation();
+            e.preventDefault();
+            handleArrowClick({ id: c.id }, el);
+          }
+        },
+        true
+      );
 
       const bar = document.createElement("div");
       bar.className = "column-bar";
@@ -295,6 +318,7 @@
           }
           n.col = null;
         }
+        arrows = arrows.filter((a) => a.from?.id !== c.id && a.to?.id !== c.id && a.from !== c.id && a.to !== c.id);
         columns = columns.filter((m) => m !== c);
         setDirty(true);
         renderColumns();
@@ -309,10 +333,6 @@
       });
 
       bar.addEventListener("pointerdown", (e) => {
-        if (tool === "arrow") {
-          handleArrowClick(c.id, el);
-          return;
-        }
         if (e.target !== bar) return;
         e.preventDefault();
         bar.setPointerCapture(e.pointerId);
@@ -373,7 +393,19 @@
       el.style.width = w + "px";
       el.style.height = h + "px";
       el.style.background = n.color;
-      if (arrowFrom === n.id) el.classList.add("selected");
+      if (arrowFrom && arrowFrom.id === n.id) el.classList.add("selected");
+
+      el.addEventListener(
+        "pointerdown",
+        (e) => {
+          if (tool === "arrow") {
+            e.stopPropagation();
+            e.preventDefault();
+            handleArrowClick({ id: n.id }, el);
+          }
+        },
+        true
+      );
 
       const bar = document.createElement("div");
       bar.className = "note-bar";
@@ -406,7 +438,7 @@
       del.addEventListener("click", (e) => {
         e.stopPropagation();
         notes = notes.filter((m) => m !== n);
-        arrows = arrows.filter((a) => a.from !== n.id && a.to !== n.id);
+        arrows = arrows.filter((a) => a.from?.id !== n.id && a.to?.id !== n.id && a.from !== n.id && a.to !== n.id);
         setDirty(true);
         renderNotes();
         renderArrows();
@@ -483,10 +515,6 @@
       }
 
       bar.addEventListener("pointerdown", (e) => {
-        if (tool === "arrow") {
-          handleArrowClick(n.id, el);
-          return;
-        }
         if (e.target !== bar) return;
         e.preventDefault();
         if (n.col) {
@@ -544,20 +572,37 @@
     for (const el of wrap.querySelectorAll(".selected")) el.classList.remove("selected");
   }
 
-  function handleArrowClick(id, el) {
+  function handleArrowClick(target, el) {
     if (!arrowFrom) {
-      arrowFrom = id;
+      arrowFrom = target;
       el.classList.add("selected");
+      status("Kliknij drugi element albo miejsce na planszy");
       return;
     }
-    if (arrowFrom === id) {
+    if (arrowFrom.id && target.id && arrowFrom.id === target.id) {
       clearArrowSelection();
       return;
     }
-    arrows.push({ id: uid(), from: arrowFrom, to: id });
+    arrows.push({ id: uid(), from: arrowFrom, to: target });
     clearArrowSelection();
     setDirty(true);
     renderArrows();
+  }
+
+  function arrowEndpoint(end, rect) {
+    if (typeof end === "string" || (end && end.id)) {
+      const el = wrap.querySelector('[data-id="' + CSS.escape(typeof end === "string" ? end : end.id) + '"]');
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      return {
+        c: [r.left - rect.left + r.width / 2, r.top - rect.top + r.height / 2],
+        size: [r.width, r.height],
+      };
+    }
+    if (end && Number.isFinite(end.x) && Number.isFinite(end.y)) {
+      return { c: [end.x * rect.width, end.y * rect.height], size: null };
+    }
+    return null;
   }
 
   function edgePoint(cx, cy, tx, ty, w, h) {
@@ -577,15 +622,11 @@
       ARROW_COLOR +
       '"/></marker></defs>';
     for (const a of arrows) {
-      const fe = wrap.querySelector('[data-id="' + CSS.escape(a.from) + '"]');
-      const te = wrap.querySelector('[data-id="' + CSS.escape(a.to) + '"]');
-      if (!fe || !te) continue;
-      const fr = fe.getBoundingClientRect();
-      const tr = te.getBoundingClientRect();
-      const fc = [fr.left - rect.left + fr.width / 2, fr.top - rect.top + fr.height / 2];
-      const tc = [tr.left - rect.left + tr.width / 2, tr.top - rect.top + tr.height / 2];
-      const p1 = edgePoint(fc[0], fc[1], tc[0], tc[1], fr.width, fr.height);
-      const p2 = edgePoint(tc[0], tc[1], fc[0], fc[1], tr.width, tr.height);
+      const f = arrowEndpoint(a.from, rect);
+      const t = arrowEndpoint(a.to, rect);
+      if (!f || !t) continue;
+      const p1 = f.size ? edgePoint(f.c[0], f.c[1], t.c[0], t.c[1], f.size[0], f.size[1]) : f.c;
+      const p2 = t.size ? edgePoint(t.c[0], t.c[1], f.c[0], f.c[1], t.size[0], t.size[1]) : t.c;
       html +=
         '<path data-id="' +
         a.id +
@@ -615,7 +656,6 @@
   /* ---------- images ---------- */
 
   function addImageFromData(data, natW, natH) {
-    const rect = R();
     const w = Math.min(natW, 320);
     const h = (natH / natW) * w;
     images.push({
@@ -644,16 +684,15 @@
         img.onerror = rej;
         img.src = url;
       });
-      let w = img.naturalWidth;
-      let h = img.naturalHeight;
+      const w = img.naturalWidth;
+      const h = img.naturalHeight;
       if (Math.max(w, h) > 2000) {
         const scale = 2000 / Math.max(w, h);
         const tmp = document.createElement("canvas");
         tmp.width = Math.round(w * scale);
         tmp.height = Math.round(h * scale);
         tmp.getContext("2d").drawImage(img, 0, 0, tmp.width, tmp.height);
-        const smaller = tmp.toDataURL("image/png");
-        addImageFromData(smaller, tmp.width, tmp.height);
+        addImageFromData(tmp.toDataURL("image/png"), tmp.width, tmp.height);
       } else {
         addImageFromData(url, w, h);
       }
@@ -738,7 +777,7 @@
   function setTool(t) {
     tool = t;
     if (t !== "arrow") clearArrowSelection();
-    for (const b of [btnPen, btnEraser, btnNote, btnTask, btnColumn, btnArrow, btnImage])
+    for (const b of [btnPen, btnEraser, btnNote, btnTask, btnColumn, btnArrow])
       b.classList.toggle("active", b.dataset.tool === t);
   }
 
@@ -748,7 +787,6 @@
   btnTask.dataset.tool = "task";
   btnColumn.dataset.tool = "column";
   btnArrow.dataset.tool = "arrow";
-  btnImage.dataset.tool = "image";
 
   btnPen.addEventListener("click", () => setTool("pen"));
   btnEraser.addEventListener("click", () => setTool("eraser"));
@@ -756,7 +794,6 @@
   btnTask.addEventListener("click", () => setTool("task"));
   btnColumn.addEventListener("click", () => setTool("column"));
   btnArrow.addEventListener("click", () => setTool("arrow"));
-  btnImage.addEventListener("click", () => setTool("pen"));
 
   swatches.forEach((sw, i) =>
     sw.addEventListener("click", () => {
@@ -845,15 +882,15 @@
     }
 
     for (const a of arrows) {
-      const fe = wrap.querySelector('[data-id="' + CSS.escape(a.from) + '"]');
-      const te = wrap.querySelector('[data-id="' + CSS.escape(a.to) + '"]');
-      if (!fe || !te) continue;
-      const fr = fe.getBoundingClientRect();
-      const tr = te.getBoundingClientRect();
-      const fc = [(fr.left - rect.left + fr.width / 2) * dpr, (fr.top - rect.top + fr.height / 2) * dpr];
-      const tc = [(tr.left - rect.left + tr.width / 2) * dpr, (tr.top - rect.top + tr.height / 2) * dpr];
-      const p1 = edgePoint(fc[0], fc[1], tc[0], tc[1], fr.width * dpr, fr.height * dpr);
-      const p2 = edgePoint(tc[0], tc[1], fc[0], fc[1], tr.width * dpr, tr.height * dpr);
+      const f = arrowEndpoint(a.from, rect);
+      const tt = arrowEndpoint(a.to, rect);
+      if (!f || !tt) continue;
+      const fc = [f.c[0] * dpr, f.c[1] * dpr];
+      const tc = [tt.c[0] * dpr, tt.c[1] * dpr];
+      const fs = f.size ? [f.size[0] * dpr, f.size[1] * dpr] : null;
+      const ts = tt.size ? [tt.size[0] * dpr, tt.size[1] * dpr] : null;
+      const p1 = fs ? edgePoint(fc[0], fc[1], tc[0], tc[1], fs[0], fs[1]) : fc;
+      const p2 = ts ? edgePoint(tc[0], tc[1], fc[0], fc[1], ts[0], ts[1]) : tc;
       t.strokeStyle = ARROW_COLOR;
       t.lineWidth = 2.5 * dpr;
       t.beginPath();
@@ -917,10 +954,8 @@
           }
           t.fillStyle = "#1e1e2e";
           t.font = `${13 * dpr}px system-ui, sans-serif`;
-          if (it.done) {
-            t.save();
-            t.globalAlpha = 0.55;
-          }
+          if (it.done) t.save();
+          if (it.done) t.globalAlpha = 0.55;
           t.fillText(it.t || "", x + 28 * dpr, yy);
           if (it.done) t.restore();
           yy += 20 * dpr;
@@ -971,14 +1006,17 @@
     const res = await fetch("/api/boards/" + encodeURIComponent(id));
     if (!res.ok) return status("Nie udało się wczytać boardu");
     const d = await res.json();
-    strokes = (d.strokes || []).filter((s) => Array.isArray(s.points));
+    strokes = (d.strokes || [])
+      .filter((s) => Array.isArray(s.points))
+      .map((s) => ({ tool: s.tool, color: s.color, width: s.width, points: s.points }));
     notes = (d.notes || []).filter((n) => Number.isFinite(n.x) && Number.isFinite(n.y));
     columns = (d.columns || []).filter((c) => Number.isFinite(c.x) && Number.isFinite(c.y));
-    arrows = (d.arrows || []).filter((a) => a.from && a.to);
+    arrows = (d.arrows || []).filter((a) => a.from != null && a.to != null);
     images = (d.images || []).filter(
       (i) => Number.isFinite(i.x) && Number.isFinite(i.y) && String(i.data || "").startsWith("data:image")
     );
     for (const arr of [notes, columns, images]) for (const o of arr) if (!o.id) o.id = uid();
+    for (const a of arrows) if (!a.id) a.id = uid();
     currentId = id;
     boardName.value = id;
     boardSelect.value = id;
